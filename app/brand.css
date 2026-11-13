@@ -45,6 +45,7 @@
 
 /* CHENLE mobile layout patch v1: preserve normal flow and all music controls. */
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+.site-shell .site-header .sound-toggle{display:inline-flex!important;align-items:center;justify-content:center}
 .capsule-prize-card.fortune-stationery .fortune-note-bottom{display:block;margin-top:18px}
 .capsule-prize-card.fortune-stationery .fortune-note-luck{width:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;text-align:center}
 .capsule-prize-card.fortune-stationery .fortune-note-luck>div{min-width:0;margin:0;padding:9px 4px}
@@ -66,6 +67,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
  html:lang(ko) .site-shell .site-header .sound-toggle[aria-pressed=true]:after{content:'음악 끄기'}
  .site-shell:has(main[data-page=universe]) .site-header .brand{display:none}
  .site-shell main[data-page=universe] .orbit-universe{padding:16px 0 24px}
+ .site-shell main[data-page=opening] .dream-opening{padding-top:24px}
  .site-shell .orbit-heading>span{display:block;font-size:12px;line-height:1.4;letter-spacing:1px}
  .site-shell .orbit-heading h1.universe-logo-title{width:min(272px,74vw);margin:8px auto 6px}
  .site-shell .orbit-heading .orbit-primary-hint{max-width:94%;width:auto;align-items:center;text-align:center;margin:7px auto 10px;padding:0 8px;gap:3px;font-size:18px!important;line-height:1.4!important}
