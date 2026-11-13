@@ -2,11 +2,11 @@
 import {useEffect,useRef,useState} from 'react';
 import {styleReferenceLooks} from '../data/styleLabReferences';
 import {styleCategories,styleItems,type StyleCategory,type StyleItem,type StyleLook} from '../data/styleLab';
-import {checkStyle,equipItem,lookLayers,randomLook,resetLook} from '../lib/style-lab';
+import {checkStyle,equipItem,layerClipStyle,lookLayers,randomLook,resetLook} from '../lib/style-lab';
 import {renderStyleCard,type StyleReview} from '../lib/style-lab-export';
 import type {Lang} from '../data/content';
 const categoryNames={zh:['发型','上衣','下装','鞋子','配饰','背景'],ko:['헤어','상의','하의','신발','액세서리','배경']};
-function Character({look,mini=false}:{look:StyleLook;mini?:boolean}){return <div className={`style-character ${mini?'style-character-mini':''}`} role="img" aria-label="Chenle outfit preview">{lookLayers(look).map(layer=><img key={layer.id} className={layer.id==='chenle-base'||layer.id==='neck-skin'?'style-skin-layer':undefined} src={layer.image} alt="" width={160} height={240} draggable={false}/>)}</div>}
+function Character({look,mini=false}:{look:StyleLook;mini?:boolean}){return <div className={`style-character ${mini?'style-character-mini':''}`} role="img" aria-label="Chenle outfit preview">{lookLayers(look).map(layer=><img key={layer.id} style={layerClipStyle(layer)} className={layer.id==='chenle-base'||layer.id==='neck-skin'?'style-skin-layer':undefined} src={layer.image} alt="" width={160} height={240} draggable={false}/>)}</div>}
 export default function ChenleStyleLab({lang,sound=false}:{lang:Lang;sound?:boolean}){
  const [look,setLook]=useState<StyleLook>(resetLook),[category,setCategory]=useState<StyleCategory>('hair'),[review,setReview]=useState<StyleReview|null>(null),[spark,setSpark]=useState(0),[exporting,setExporting]=useState(false),[download,setDownload]=useState(''),[error,setError]=useState('');
  const dialog=useRef<HTMLDialogElement>(null),audio=useRef<AudioContext|null>(null),exportLock=useRef(false),zh=lang==='zh';
