@@ -1,3 +1,4 @@
+import noteTranslations from '../data/noteTranslations.json' with {type:'json'};
 import {cleanNoteDraft} from '../lib/note-design.mjs';
 function noteJson(data,status=200,headers={}){return Response.json(data,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...headers}})}
 export function isNoteModerator(request,env){const actual=request.headers.get('oai-authenticated-user-email');return !!actual&&!!env.NOTE_MODERATOR_EMAIL&&actual.toLowerCase()===env.NOTE_MODERATOR_EMAIL.toLowerCase()}
@@ -8,6 +9,7 @@ function noteVisitor(request,env){const foreign=request.headers.get('Origin')!==
 function publicNote(n){return {id:n.id,message:n.message,from:n.sender,location:n.location,language:n.language,styleVariant:n.style_variant,textColor:n.text_color,stickers:JSON.parse(n.stickers),createdAt:n.created_at,status:n.status,visibility:n.visibility||'public',source:'remote'}}
 async function noteBody(request){if(!request.headers.get('Content-Type')?.startsWith('application/json'))throw Error('invalid_json');const reader=request.body?.getReader();if(!reader)throw Error('invalid_json');let count=0,out='';const decoder=new TextDecoder();for(;;){const {value,done}=await reader.read();if(done)break;count+=value.byteLength;if(count>4096){await reader.cancel();throw Error('too_large')}out+=decoder.decode(value,{stream:true})}out+=decoder.decode();return JSON.parse(out)}
 const noteTranslationCache=new Map();
+let noteTranslationRetryUntil=0;
 export async function translateNote(request,fetcher=fetch,env={}){
  const origin=new URL(request.url).origin;
  if(request.method!=='POST')return noteJson({error:'method_not_allowed'},405);
@@ -15,15 +17,29 @@ export async function translateNote(request,fetcher=fetch,env={}){
  let body;try{body=await noteBody(request)}catch{return noteJson({error:'invalid_json'},400)}
  const message=typeof body?.message==='string'?body.message.trim():'';
  if(!message||Array.from(message).length>60||!['zh-CN','ko','en'].includes(body?.target))return noteJson({error:'invalid_translation'},400);
+ const builtIn=noteTranslations.find(note=>note.source===message)?.translations[body.target];if(builtIn)return noteJson({translation:builtIn});
  const key=JSON.stringify([message,body.target]),cached=noteTranslationCache.get(key);
  if(cached&&cached.until>Date.now())return noteJson({translation:cached.text});
- const providers=[{path:'/translate_a/single',client:'gtx',single:true},{path:'/translate_a/t',client:'dict-chrome-ex',single:false}];
+ if(env.DEEPL_API_KEY||env.GOOGLE_TRANSLATE_API_KEY){
+  try{
+   const deepL=!!env.DEEPL_API_KEY,endpoint=deepL?(env.DEEPL_API_KEY.endsWith(':fx')?'https://api-free.deepl.com/v2/translate':'https://api.deepl.com/v2/translate'):'https://translation.googleapis.com/language/translate/v2';
+   const response=await fetcher(endpoint,{method:'POST',headers:{'Content-Type':'application/json',...(deepL?{Authorization:'DeepL-Auth-Key '+env.DEEPL_API_KEY}:{'X-Goog-Api-Key':env.GOOGLE_TRANSLATE_API_KEY})},body:JSON.stringify(deepL?{text:[message],target_lang:{'zh-CN':'ZH',ko:'KO',en:'EN'}[body.target]}:{q:message,target:body.target,format:'text'}),signal:AbortSignal.timeout(8000)});
+   if(!response.ok)return noteJson({error:'translation_unavailable'},503,response.status===429?{'Retry-After':response.headers.get('Retry-After')||'60'}:{});
+   const data=await response.json(),text=deepL?data?.translations?.[0]?.text:data?.data?.translations?.[0]?.translatedText;
+   if(typeof text!=='string'||!text.trim()||text.length>4000)throw Error('invalid_translation');
+   const decoded=text.replace(/&(?:amp|quot|apos|lt|gt|#39);/g,entity=>({'&amp;':'&','&quot;':'"','&apos;':"'",'&lt;':'<','&gt;':'>','&#39;':"'"}[entity]));
+   if(noteTranslationCache.size>=300)noteTranslationCache.delete(noteTranslationCache.keys().next().value);
+   noteTranslationCache.set(key,{text:decoded,until:Date.now()+3600000});return noteJson({translation:decoded});
+  }catch{return noteJson({error:'translation_unavailable'},503)}
+ }
+ if(noteTranslationRetryUntil>Date.now())return noteJson({error:'translation_unavailable'},503,{'Retry-After':String(Math.ceil((noteTranslationRetryUntil-Date.now())/1000))});
+ const providers=[{path:'/translate_a/t',client:'dict-chrome-ex',single:false},{path:'/translate_a/single',client:'gtx',single:true}];
  for(const provider of providers){
   try{
    const url=new URL('https://translate.googleapis.com'+provider.path);
    url.search=new URLSearchParams({client:provider.client,sl:'auto',tl:body.target,q:message,...(provider.single?{dt:'t'}:{})}).toString();
    const response=await fetcher(url,{headers:{Accept:'application/json','User-Agent':'CHENLE-UNIVERSE-Translation/1.0'},signal:AbortSignal.timeout(4000)});
-   if(response.status===429)return noteJson({error:'translation_unavailable'},503,{'Retry-After':response.headers.get('Retry-After')||'60'});
+   if(response.status===429){const retry=Math.min(3600,Math.max(1,Number(response.headers.get('Retry-After'))||60));noteTranslationRetryUntil=Date.now()+retry*1000;return noteJson({error:'translation_unavailable'},503,{'Retry-After':String(retry)})}
    if(!response.ok){console.warn('note_translation_upstream_http',{format:provider.single?'sentences':'dictionary',status:response.status});throw Error('upstream_http')}
    const data=await response.json();
    const text=provider.single&&Array.isArray(data?.[0])&&data[0].every(Array.isArray)?data[0].map(segment=>typeof segment?.[0]==='string'?segment[0]:'').join(''):typeof data?.[0]==='string'?data[0]:data?.[0]?.[0];

@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import ts from 'typescript';
-const require=createRequire(import.meta.url),source=ts.transpileModule(readFileSync('components/NoteTranslation.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+const require=createRequire(import.meta.url),source=ts.transpileModule(readFileSync('components/NoteTranslation.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;
 const states=[],refs=[],effects=[],timers=new Map();let stateIndex=0,refIndex=0,timerId=0,pending=[];
 const hooks={useState(initial){const i=stateIndex++;if(!(i in states))states[i]=initial;return [states[i],next=>states[i]=next]},useRef(initial){const i=refIndex++;return refs[i]??(refs[i]={current:initial})},useEffect(fn){effects.push(fn)}};
 const module={exports:{}};

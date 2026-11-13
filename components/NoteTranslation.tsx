@@ -1,8 +1,9 @@
 'use client';
+import noteTranslations from '../data/noteTranslations.json';
 import {siteFetch} from '../lib/site-network';
 import {useEffect,useRef,useState} from 'react';
 import type {Lang} from '../data/content';
-const copy={zh:{translate:'翻译',loading:'正在翻译…',error:'暂时翻译不了，请重试。',hint:'自动识别原文语言 · 机器翻译仅供参考',result:'译文',original:'查看原文'},ko:{translate:'번역하기',loading:'번역 중…',error:'번역하지 못했어요. 다시 시도해 주세요.',hint:'원문 언어 자동 감지 · 기계 번역은 참고용이에요',result:'번역문',original:'원문 보기'}};
+const copy={zh:{translate:'翻译',loading:'正在翻译…',error:'翻译服务暂时不可用，请稍后重试。原文仍保留。',hint:'自动识别原文语言 · 机器翻译仅供参考',result:'译文',original:'查看原文'},ko:{translate:'번역하기',loading:'번역 중…',error:'번역 서비스를 잠시 이용할 수 없어요. 원문은 그대로예요.',hint:'원문 언어 자동 감지 · 기계 번역은 참고용이에요',result:'번역문',original:'원문 보기'}};
 export default function NoteTranslation({message,lang}:{message:string;lang:Lang}){
  const [target,setTarget]=useState(lang==='zh'?'zh-CN':'ko'),[translated,setTranslated]=useState(''),[loading,setLoading]=useState(false),[failed,setFailed]=useState(false);
  const cache=useRef(new Map<string,string>()),controller=useRef<AbortController|null>(null),t=copy[lang];
@@ -11,7 +12,7 @@ export default function NoteTranslation({message,lang}:{message:string;lang:Lang
  useEffect(()=>{cancelTranslation();setTranslated('');setFailed(false);setLoading(false);return cancelTranslation},[message,target]);
  async function translate(){
   cancelTranslation();const current=new AbortController();controller.current=current;const isCurrent=()=>controller.current===current;
-  const key=JSON.stringify([message,target]),saved=cache.current.get(key);setFailed(false);if(saved){setTranslated(saved);setLoading(false);return}
+  const key=JSON.stringify([message,target]),saved=cache.current.get(key)||noteTranslations.find(note=>note.source===message.trim())?.translations[target];setFailed(false);if(saved){setTranslated(saved);setLoading(false);return}
   setLoading(true);setTranslated('');const timeout=setTimeout(()=>current.abort(),12000);
   try{const r=await siteFetch('/api/notes/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,target}),signal:current.signal});if(!r.ok)throw Error();const data=await r.json();if(typeof data.translation!=='string'||!data.translation.trim())throw Error();if(isCurrent()&&!current.signal.aborted){cache.current.set(key,data.translation);setTranslated(data.translation)}}catch{if(isCurrent())setFailed(true)}finally{clearTimeout(timeout);if(isCurrent())setLoading(false)}
  }
