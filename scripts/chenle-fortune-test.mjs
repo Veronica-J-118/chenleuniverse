@@ -23,7 +23,7 @@ for(const fortune of cards){
  for(const lang of ['zh','ko']){
  const html=renderToStaticMarkup(React.createElement(Result,{fortune,lang,capsuleSrc:'/test-capsule.webp',edge:0,onAgain:()=>{}}));
  for(const text of [lang==='zh'?fortune.titleZh:fortune.titleKo,lang==='zh'?fortune.messageZh:fortune.messageKo,lang==='zh'?fortune.luckyItemZh:fortune.luckyItemKo,String(fortune.luckyNumber),'ONE MORE?','CHENLE FORTUNE',fortuneDisclaimer[lang]])assert.ok(html.includes(text),`${fortune.id} ${lang}: full matched text`);
- assert.ok(!html.includes(fortune.id));assert.ok(!html.includes('memory-photo-window'));
+ assert.ok(!html.includes(fortune.id));assert.ok(!html.includes('memory-photo-window'));assert.ok(!html.includes('fortune-note-photo'));assert.ok(!html.includes('<img'));
  }
 }
 const machine=readFileSync('components/GachaMachine.tsx','utf8');assert.ok(machine.includes('controller.current!.play(setStep, () => complete.current())'));assert.ok(machine.includes('if (controller.current!.busy) return'));assert.ok(machine.includes('onAgain={turn}'));assert.ok(!machine.includes('memoryGachaPhotos'));

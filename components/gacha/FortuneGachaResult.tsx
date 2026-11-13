@@ -3,7 +3,6 @@ import type { Lang } from '../../data/content';
 import {fortuneDisclaimer,type ChenleFortune} from '../../data/chenleFortunes';
 import {Camera,Heart,Headphones,Music2,PawPrint,Star} from 'lucide-react';
 const themes=['cookie','pink','blue'] as const;
-const portraits=['/images/memory-gacha/photo-03.JPG','/images/memory-gacha/photo-09.JPG','/images/memory-gacha/photo-05.JPG'];
 export default function FortuneGachaResult({fortune,lang,onAgain}:{fortune:ChenleFortune;lang:Lang;capsuleSrc:string;edge:number;onAgain:()=>void}){
  const zh=lang==='zh',variant=(Number(fortune.id.slice(-2))-1)%3,theme=themes[variant],Doodle=fortune.luckyItemZh.includes('头')||fortune.luckyItemZh.includes('狗')?PawPrint:fortune.luckyItemZh.includes('耳')||fortune.luckyItemZh==='AirPods'?Headphones:fortune.luckyItemZh.includes('相')||fortune.luckyItemZh==='拍立得'?Camera:Music2;
  return <article className={`capsule-prize-card fortune-card fortune-stationery fortune-theme-${theme}`} lang={zh?'zh-CN':'ko'} aria-label={zh?'辰乐运势卡':'천러 행운 카드'}>
@@ -13,7 +12,7 @@ export default function FortuneGachaResult({fortune,lang,onAgain}:{fortune:Chenl
    <span className="fortune-note-scribble" aria-hidden="true"><Star size={17} strokeWidth={1.1}/><Heart size={19} strokeWidth={1.1}/><span>✧</span></span>
    <h2>{zh?fortune.titleZh:fortune.titleKo}</h2>
    <p className="fortune-note-message">{zh?fortune.messageZh:fortune.messageKo}</p>
-   <div className="fortune-note-bottom"><dl className="fortune-note-luck"><div><dt>Lucky item</dt><dd>{zh?fortune.luckyItemZh:fortune.luckyItemKo}</dd></div><div><dt>Lucky number</dt><dd>{fortune.luckyNumber}</dd></div></dl><figure className="fortune-note-photo" aria-hidden="true"><img src={portraits[variant]} alt="" width={90} height={115}/><figcaption>chenle ♡</figcaption></figure></div>
+   <div className="fortune-note-bottom"><dl className="fortune-note-luck"><div><dt>Lucky item</dt><dd>{zh?fortune.luckyItemZh:fortune.luckyItemKo}</dd></div><div><dt>Lucky number</dt><dd>{fortune.luckyNumber}</dd></div></dl></div>
    <div className="fortune-note-doodles" aria-hidden="true"><Doodle size={29} strokeWidth={1.1}/><span>♡</span><Star size={20} strokeWidth={1}/></div>
   </div>
   <button type="button" className="memory-one-more fortune-note-again" onClick={onAgain}>ONE MORE? <span aria-hidden="true">↗</span></button>
