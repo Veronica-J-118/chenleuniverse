@@ -4,7 +4,7 @@ import {translateNote,notesApi} from '../worker/notes.mjs';
 const origin='https://notes.example';
 const request=(body,extra={})=>new Request(origin+'/api/notes/translate',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',...extra},body:JSON.stringify(body)});
 let calls=0;
-const provider=async url=>{calls++;assert.equal(url.hostname,'translate.googleapis.com');assert.equal(url.searchParams.get('sl'),'auto');assert.equal(url.searchParams.get('tl'),'ko');assert.equal(url.searchParams.get('q'),'生日快乐！');return Response.json([['생일 축하해요!','zh-CN']])};
+const provider=async url=>{calls++;assert.equal(url.hostname,'translate.googleapis.com');assert.equal(url.searchParams.get('sl'),'auto');assert.equal(url.pathname,'/translate_a/single');assert.equal(url.searchParams.get('dt'),'t');assert.equal(url.searchParams.get('tl'),'ko');assert.equal(url.searchParams.get('q'),'生日快乐！');return Response.json([[['생일 축하해요!','生日快乐！']],null,'zh-CN'])};
 assert.equal((await translateNote(request({message:'生日快乐！',target:'ko'}),provider)).status,200);
 assert.deepEqual(await(await translateNote(request({message:'生日快乐！',target:'ko'}),provider)).json(),{translation:'생일 축하해요!'});assert.equal(calls,1,'Repeated translations use cached text');
 for(const target of ['zh-CN','en'])assert.equal((await translateNote(request({message:'테스트',target}),async()=>Response.json(['test']))).status,200);
@@ -14,5 +14,11 @@ assert.equal((await translateNote(new Request(origin+'/api/notes/translate'),pro
 assert.equal((await translateNote(request({message:'failure',target:'en'}),async()=>new Response('',{status:429}))).status,503);
 assert.equal((await translateNote(request({message:'malformed',target:'en'}),async()=>Response.json({text:'wrong'}))).status,503);
 assert.equal((await notesApi(request({message:'',target:'en'}),{})).status,400,'Translation route does not require note database');
-const ui=readFileSync('components/WordsForChenle.tsx','utf8'),translation=readFileSync('components/NoteTranslation.tsx','utf8');assert.ok(ui.includes('<NoteTranslation message={active.message} lang={lang}/>'));assert.ok(!ui.includes('noteTranslationUrl'));assert.ok(!translation.includes('target="_blank"'));assert.ok(translation.includes('current.signal.aborted'));assert.ok(translation.includes('aria-live="polite"'));
+const ui=readFileSync('components/WordsForChenle.tsx','utf8'),translation=readFileSync('components/NoteTranslation.tsx','utf8');assert.ok(ui.includes('<NoteTranslation message={active.message} lang={lang}/>'));assert.ok(!ui.includes('noteTranslationUrl'));assert.ok(!translation.includes('target="_blank"'));assert.ok(translation.includes('current.signal.aborted'));assert.ok(translation.includes('aria-live="polite"'));assert.ok(!translation.includes('AbortSignal.any'));assert.ok(translation.includes('clearTimeout(timeout)'));
 console.log('PASS: inline translation, language targets, auto-detect request, cache, stale request cancellation, route validation, provider errors and original note preserved.');
+
+let fallbackCalls=0;
+assert.deepEqual(await(await translateNote(request({message:'fallback case',target:'en'}),async url=>{fallbackCalls++;return url.pathname.endsWith('/single')?new Response('',{status:503}):Response.json([['Fallback translation','en']])})).json(),{translation:'Fallback translation'});assert.equal(fallbackCalls,2);
+assert.deepEqual(await(await translateNote(request({message:'multiple sentences',target:'en'}),async()=>Response.json([[['First sentence. ','x'],['Second sentence.','y']],null,'en']))).json(),{translation:'First sentence. Second sentence.'});
+let limitedCalls=0;const limited=await translateNote(request({message:'quota case',target:'en'}),async()=>{limitedCalls++;return new Response('',{status:429,headers:{'Retry-After':'120'}})});assert.equal(limited.status,503);assert.equal(limited.headers.get('Retry-After'),'120');assert.equal(limitedCalls,1,'Respect upstream rate limits without retrying');
+console.log('PASS: complete multi-sentence translation, same-provider format fallback and upstream rate-limit handling.');

@@ -6,13 +6,14 @@ const copy={zh:{translate:'翻译',loading:'正在翻译…',error:'暂时翻译
 export default function NoteTranslation({message,lang}:{message:string;lang:Lang}){
  const [target,setTarget]=useState(lang==='zh'?'zh-CN':'ko'),[translated,setTranslated]=useState(''),[loading,setLoading]=useState(false),[failed,setFailed]=useState(false);
  const cache=useRef(new Map<string,string>()),controller=useRef<AbortController|null>(null),t=copy[lang];
+ function cancelTranslation(){const previous=controller.current;controller.current=null;previous?.abort()}
  useEffect(()=>{setTarget(lang==='zh'?'zh-CN':'ko')},[lang]);
- useEffect(()=>{controller.current?.abort();setTranslated('');setFailed(false);setLoading(false);return()=>controller.current?.abort()},[message,target]);
+ useEffect(()=>{cancelTranslation();setTranslated('');setFailed(false);setLoading(false);return cancelTranslation},[message,target]);
  async function translate(){
-  controller.current?.abort();const current=new AbortController();controller.current=current;
-  const key=JSON.stringify([message,target]),saved=cache.current.get(key);setFailed(false);if(saved){setTranslated(saved);return}
-  setLoading(true);setTranslated('');
-  try{const r=await siteFetch('/api/notes/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,target}),signal:AbortSignal.any([current.signal,AbortSignal.timeout(12000)])});if(!r.ok)throw Error();const data=await r.json();if(typeof data.translation!=='string'||!data.translation.trim())throw Error();if(!current.signal.aborted){cache.current.set(key,data.translation);setTranslated(data.translation)}}catch{if(!current.signal.aborted)setFailed(true)}finally{if(!current.signal.aborted)setLoading(false)}
+  cancelTranslation();const current=new AbortController();controller.current=current;const isCurrent=()=>controller.current===current;
+  const key=JSON.stringify([message,target]),saved=cache.current.get(key);setFailed(false);if(saved){setTranslated(saved);setLoading(false);return}
+  setLoading(true);setTranslated('');const timeout=setTimeout(()=>current.abort(),12000);
+  try{const r=await siteFetch('/api/notes/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,target}),signal:current.signal});if(!r.ok)throw Error();const data=await r.json();if(typeof data.translation!=='string'||!data.translation.trim())throw Error();if(isCurrent()&&!current.signal.aborted){cache.current.set(key,data.translation);setTranslated(data.translation)}}catch{if(isCurrent())setFailed(true)}finally{clearTimeout(timeout);if(isCurrent())setLoading(false)}
  }
- return <><p className="words-full-message" lang={translated?target:undefined} aria-live="polite">{translated||message}</p><div className="notes-translation"><label>{t.result}<select value={target} onChange={e=>setTarget(e.target.value)}><option value="zh-CN">中文</option><option value="ko">한국어</option><option value="en">English</option></select></label><button type="button" onClick={translate} disabled={loading}>{loading?t.loading:t.translate}</button><button type="button" onClick={()=>{controller.current?.abort();setTranslated('');setLoading(false)}} disabled={!translated}>{t.original}</button><small>{t.hint}</small><div aria-live="polite" aria-busy={loading}>{failed&&<p role="alert">{t.error}</p>}</div></div></>;
+ return <><p className="words-full-message" lang={translated?target:undefined} aria-live="polite">{translated||message}</p><div className="notes-translation"><label>{t.result}<select value={target} onChange={e=>setTarget(e.target.value)}><option value="zh-CN">中文</option><option value="ko">한국어</option><option value="en">English</option></select></label><button type="button" onClick={translate} disabled={loading}>{loading?t.loading:t.translate}</button><button type="button" onClick={()=>{cancelTranslation();setTranslated('');setLoading(false);setFailed(false)}} disabled={!translated}>{t.original}</button><small>{t.hint}</small><div aria-live="polite" aria-busy={loading}>{failed&&<p role="alert">{t.error}</p>}</div></div></>;
 }

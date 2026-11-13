@@ -17,16 +17,23 @@ export async function translateNote(request,fetcher=fetch,env={}){
  if(!message||Array.from(message).length>60||!['zh-CN','ko','en'].includes(body?.target))return noteJson({error:'invalid_translation'},400);
  const key=JSON.stringify([message,body.target]),cached=noteTranslationCache.get(key);
  if(cached&&cached.until>Date.now())return noteJson({translation:cached.text});
- try{
-  const url=new URL('https://translate.googleapis.com/translate_a/t');
-  url.search=new URLSearchParams({client:'dict-chrome-ex',sl:'auto',tl:body.target,q:message}).toString();
-  const response=await fetcher(url,{signal:AbortSignal.timeout(9000)});
-  if(!response.ok)throw Error('translation_unavailable');
-  const data=await response.json(),text=typeof data?.[0]==='string'?data[0]:data?.[0]?.[0];
-  if(typeof text!=='string'||!text.trim()||text.length>4000)throw Error('invalid_translation');
-  if(noteTranslationCache.size>=300)noteTranslationCache.delete(noteTranslationCache.keys().next().value);
-  noteTranslationCache.set(key,{text,until:Date.now()+3600000});return noteJson({translation:text});
- }catch{return noteJson({error:'translation_unavailable'},503)}
+ const providers=[{path:'/translate_a/single',client:'gtx',single:true},{path:'/translate_a/t',client:'dict-chrome-ex',single:false}];
+ for(const provider of providers){
+  try{
+   const url=new URL('https://translate.googleapis.com'+provider.path);
+   url.search=new URLSearchParams({client:provider.client,sl:'auto',tl:body.target,q:message,...(provider.single?{dt:'t'}:{})}).toString();
+   const response=await fetcher(url,{headers:{Accept:'application/json','User-Agent':'CHENLE-UNIVERSE-Translation/1.0'},signal:AbortSignal.timeout(4000)});
+   if(response.status===429)return noteJson({error:'translation_unavailable'},503,{'Retry-After':response.headers.get('Retry-After')||'60'});
+   if(!response.ok){console.warn('note_translation_upstream_http',{format:provider.single?'sentences':'dictionary',status:response.status});throw Error('upstream_http')}
+   const data=await response.json();
+   const text=provider.single&&Array.isArray(data?.[0])&&data[0].every(Array.isArray)?data[0].map(segment=>typeof segment?.[0]==='string'?segment[0]:'').join(''):typeof data?.[0]==='string'?data[0]:data?.[0]?.[0];
+   if(typeof text!=='string'||!text.trim()||text.length>4000)throw Error('invalid_translation');
+   if(noteTranslationCache.size>=300)noteTranslationCache.delete(noteTranslationCache.keys().next().value);
+   noteTranslationCache.set(key,{text,until:Date.now()+3600000});return noteJson({translation:text});
+  }catch{ /* Try the alternate response format from the same translation provider. */ }
+ }
+ return noteJson({error:'translation_unavailable'},503);
+
 }
 export async function notesApi(request,env){
  const url=new URL(request.url),path=url.pathname,admin=isNoteModerator(request,env)||await tokenAdmin(request,env);
