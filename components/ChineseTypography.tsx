@@ -10,7 +10,7 @@ export default function ChineseTypography({lang}:{lang:string}){
   const update=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{
    if(!active)return;
    document.querySelectorAll<HTMLElement>('.site-shell *,.page-transition *').forEach(el=>{
-    if(marked.has(el)||el.closest('script,style,svg,canvas,[aria-hidden="true"],.crossword-cell,.puzzle-cell'))return;
+    if(marked.has(el)||el.closest('script,style,svg,canvas,[aria-hidden="true"],.crossword-cell,.puzzle-cell,.orbit-navigation'))return;
     const text=Array.from(el.childNodes).filter(n=>n.nodeType===Node.TEXT_NODE).map(n=>n.textContent).join('');
     if(!/[\u3400-\u9fff]/.test(text))return;
     const computed=getComputedStyle(el),size=parseFloat(computed.fontSize),line=parseFloat(computed.lineHeight)/size;

@@ -19,20 +19,17 @@
  .site-footer { flex-wrap: wrap; gap: 12px; }
 }
 
-/* Explicit counter/title cells avoid overlapping anonymous flex text on iOS. */
-.orbit-universe .orbit-navigation { display:grid; grid-template-columns:44px minmax(0,1fr) 44px; gap:14px; padding-inline:14px; }
-.orbit-universe .orbit-arrow { width:44px; height:44px; min-width:44px; }
-.orbit-universe .orbit-selection { min-width:0; width:100%; }
-.orbit-selection-text { display:flex; align-items:center; justify-content:center; gap:12px; width:100%; color:#5f759b; font-family:var(--hand-font); font-size:20px; line-height:1.5; text-align:center; }
-.orbit-selection-count { flex:0 0 auto; white-space:nowrap; font-variant-numeric:tabular-nums; letter-spacing:1px; }
-.orbit-selection-label { min-width:0; overflow-wrap:anywhere; white-space:normal; letter-spacing:0; }
-.orbit-selection-text>i { flex:0 0 auto; font-style:normal; color:#fff9e7; }
-@media(max-width:900px) {
- .orbit-universe .orbit-navigation { gap:10px; max-width:370px; }
- .orbit-selection-text { flex-direction:column; gap:3px; font-size:18px; line-height:1.45; }
- .orbit-selection-count { font-size:14px; }
- .orbit-selection-text>i { display:none; }
- .orbit-selection-label { width:100%; }
+/* Navigation owns its type scale: keep counter and title on separate grid rows. */
+.site-shell .orbit-universe .orbit-navigation { display:grid; grid-template-columns:44px minmax(0,1fr) 44px; align-items:center; gap:16px; width:min(100%,600px); max-width:600px; box-sizing:border-box; padding:8px 14px; }
+.site-shell .orbit-universe .orbit-arrow { width:44px; height:44px; min-width:44px; }
+.site-shell .orbit-universe .orbit-selection { min-width:0; width:100%; margin:0; }
+.site-shell .orbit-universe .orbit-selection-text { display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:auto auto; align-items:center; justify-items:center; row-gap:8px; width:100%; color:#5f759b; font-family:var(--hand-font); text-align:center; }
+.site-shell .orbit-universe .orbit-selection-count { display:block; grid-row:1; position:static; margin:0; padding:0; font-size:16px!important; line-height:1.5!important; letter-spacing:1px!important; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.site-shell .orbit-universe .orbit-selection-label { display:block; grid-row:2; position:static; min-width:0; max-width:100%; margin:0; padding:0; font-size:22px!important; line-height:1.6!important; letter-spacing:0!important; white-space:normal; overflow-wrap:anywhere; }
+.site-shell .orbit-universe .orbit-selection-text>i { display:none; }
+@media(max-width:600px) {
+ .site-shell .orbit-universe .orbit-navigation { gap:10px; }
+ .site-shell .orbit-universe .orbit-selection-label { font-size:20px!important; }
 }
 
 /* Keep the logo prominent and the map instructions quietly to one side. */
